@@ -1,0 +1,290 @@
+﻿<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Basic Video Player</title>
+    <style type="text/css">
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            opacity: 0.5;
+            position: absolute;
+        }
+
+            input[type=range]:focus {
+                outline: none;
+            }
+
+            input[type=range]::-webkit-slider-runnable-track {
+                width: 100%;
+                height: 40px;
+                cursor: pointer;
+                opacity: 1;
+            }
+
+            input[type=range]::-webkit-slider-thumb {
+                border: 1px solid #000000;
+                height: 40px;
+                width: 16px;
+                border-radius: 3px;
+                background: rgba(255, 255, 255, 0.20);
+                cursor: pointer;
+                -webkit-appearance: none;
+                margin: 10px 0 14px 0;
+                opacity: 1;
+            }
+
+        .btn-group {
+            margin-top: 10px;
+        }
+
+
+        #VideoElement {
+            border: 1px solid black;
+            height: 240px;
+            width: 320px;
+        }
+
+        #VideoSlider {
+            width: 320px;
+            height: 0px;
+            margin-top: 20px;
+        }
+
+        canvas {
+            margin-top: 20px;
+            border: 1px solid black;
+        }
+    </style>
+    <script type="text/javascript" src="VideoPlayer.json"></script>
+    <script type="text/javascript">
+        _video = null;
+        _SliderCanvas = null;
+        _activeIndex = 0;
+        _videoPlayerCfg = null;
+        _activeRectangle = {};
+
+        _fromTime = 0;
+        _toTime = 0;
+
+        _canvasHeight = 20;
+        _canvasWidth = 320;
+
+        function videoEnd() {
+            document.getElementById('btnPlay').innerHTML = '&gt;';
+        }
+
+        //video buttons definition
+        function setVideoTime(time) {
+            _video.currentTime += time;
+        }
+
+        function btnPrewClick() {            
+            if (_activeIndex > 0) {
+                _videoPlayerCfg.interval[_activeIndex].active = false;
+                _activeIndex--;
+                _videoPlayerCfg.interval[_activeIndex].active = true;
+                setInterval([_videoPlayerCfg.interval[_activeIndex]]);
+            }
+                
+        }
+
+        function btnPlayPauseClick() {
+            try {
+                if (_video.paused) {
+                    _video.play();
+                    document.getElementById('btnPlay').innerHTML = '||';
+                }
+                else {
+                    _video.pause();
+                    document.getElementById('btnPlay').innerHTML = '&gt;';
+                }
+            }
+            catch (err) {
+                console.log(err);
+            }
+        }
+
+        function btnNextClick() {
+            if (_activeIndex < _videoPlayerCfg.interval.length - 1) {
+                _videoPlayerCfg.interval[_activeIndex].active = false;
+                _activeIndex++;
+                _videoPlayerCfg.interval[_activeIndex].active = true;
+                setInterval([_videoPlayerCfg.interval[_activeIndex]]);
+            }
+        }
+        //--video buttons definition
+
+        //color
+        function setColor(from, to, active) {
+            try {
+                var ctx = _SliderCanvas.getContext("2d");
+
+                lx = from;
+                ly = _canvasHeight / 4 * 1;
+                rx = to - from;
+                ry = _canvasHeight / 4 * 2;                
+
+                if (active) {
+                    if (Object.keys(_activeRectangle).length) {
+                        ctx.fillStyle = 'black';
+                        ctx.fillRect(_activeRectangle.lx, _activeRectangle.ly, _activeRectangle.rx, _activeRectangle.ry);
+                    }
+                    _activeRectangle.lx = lx;
+                    _activeRectangle.ly = ly;
+                    _activeRectangle.rx = rx;
+                    _activeRectangle.ry = ry;
+                }
+
+                ctx.fillStyle = active ? 'green' : 'black';
+                ctx.fillRect(lx, ly, rx, ry);
+
+                ctx.stroke();
+            }
+            catch (err) {
+                console.log(err);
+            }           
+        }
+
+        function videLoop(from, to) {
+            try {
+                _fromTime = from;
+                _toTime = to;
+                _video.currentTime = from;
+                context = this;
+                _video.addEventListener("timeupdate", function () {
+                    if (this.currentTime >= _toTime) {
+                        this.currentTime = _fromTime;
+                    }
+
+                    if (this.currentTime.toFixed(4) < _fromTime.toFixed(4)) {                        
+                        this.currentTime = _fromTime;
+                    }
+                });
+            }
+            catch (err) {
+                console.log(err);
+            }
+        }
+
+        //interval
+        function setInterval(interval, firstTime) {
+            try {                
+                interval.forEach(function (el, index, array) {
+                    fromTime = _video.duration * el.from;
+                    toTime = _video.duration * el.to;
+
+                    fromWidht = _canvasWidth * el.from;
+                    toWidth = _canvasWidth * el.to;
+
+                    if (el.active) {
+                        videLoop(fromTime, toTime);
+                        if (typeof firstTime !== 'undefined' && firstTime === true) {
+                            _activeIndex = index;
+                        }
+                    }
+
+                    setColor(fromWidht, toWidth, el.active);
+                });
+            }
+            catch (err) {
+                console.log(err);
+            }
+        }
+
+        // initial
+        function init() {
+            setDefaults();
+        }
+        function setVideoTime(ticks) {            
+            try {
+                flagToBreak = false;
+                distance = -1;
+                setINtervalIndex = -1;
+
+                _videoPlayerCfg.interval.forEach(function (el, index, array) {
+                    _videoPlayerCfg.interval[_activeIndex].active = false;
+                    if (flagToBreak)
+                        return;
+                    fromTime = _video.duration * el.from;
+                    toTime = _video.duration * el.to;
+
+                    //possible ticks trange
+                    fromTicks = fromTime / (_video.duration / 100);
+                    toTicks = toTime / (_video.duration / 100);                    
+
+                    if (ticks >= fromTicks && ticks <= toTicks) {
+                        _activeIndex = index;
+                        _videoPlayerCfg.interval[_activeIndex].active = true;
+                        setInterval([_videoPlayerCfg.interval[_activeIndex]]);
+
+                        flagToBreak = true;
+                    }
+                    else {
+                        if (distance == -1) {
+                            distance = Math.abs(ticks - fromTicks);
+                            setINtervalIndex = index;
+                        }
+
+                        if (distance > Math.abs(ticks - fromTicks)) {
+                            distance = Math.abs(ticks - fromTicks);
+                            setINtervalIndex = index;
+                        }
+                        if (distance > Math.abs(ticks - toTicks)) {
+                            distance = Math.abs(ticks - toTicks);
+                            setINtervalIndex = index;
+                        }                        
+                    }
+
+                });
+
+                if (!flagToBreak) {
+                    _activeIndex = setINtervalIndex;
+                    _videoPlayerCfg.interval[_activeIndex].active = true;                    
+                    setInterval([_videoPlayerCfg.interval[_activeIndex]]);
+                }
+            }
+            catch (err) {
+                console.log(err);
+            }
+
+            _video.currentTime = ticks * (_video.duration / 100);
+        }
+
+        function setDefaults() {
+            _video = document.getElementById('VideoElement');
+            _SliderCanvas = document.getElementById('SliderCanvas');
+            if (typeof videoPlayerCfg !== 'undefined' && videoPlayerCfg != null) {
+                _videoPlayerCfg = videoPlayerCfg;
+                _video.src = _videoPlayerCfg.url;
+                _video.addEventListener('loadeddata', function () {
+                    setInterval(_videoPlayerCfg.interval, true);
+                }, false);
+
+                // create custom slidebar
+                _video.addEventListener("timeupdate", function () {
+                    VideoSlider.value = _video.currentTime / (_video.duration / 100);
+                });
+            }
+            else {
+                console.log('file load error');
+            }
+        }
+
+    </script>
+</head>
+<body onload="init();">
+    <video id="VideoElement" onended="videoEnd()" controls title="video element"></video>
+
+    <div>
+        <input id="VideoSlider" type="range" min="0" max="100" step="1" onclick="setVideoTime(this.value)" />
+        <canvas id="SliderCanvas" width="320" height="20">get canvas</canvas>
+
+    </div>
+
+    <div class="btn-group">
+        <button id="btnPrew" onclick="btnPrewClick()">&lt;&lt;</button>
+        <button id="btnPlay" onclick="btnPlayPauseClick()">&gt;</button>
+        <button id="btnNext" onclick="btnNextClick()">&gt;&gt;</button>
+    </div>
+</body>
+</html>

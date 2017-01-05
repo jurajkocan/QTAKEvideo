@@ -1,0 +1,31 @@
+﻿videoPlayerCfg = {
+  "url": "QTAKEvideo.mp4",
+  "interval": [
+    {
+      "from": 0.0,
+      "to": 0.1,
+      "active": false
+    },
+    {
+      "from": 0.5,
+      "to": 0.6,
+      "active": true
+    },
+    {
+      "from": 0.7,
+      "to": 0.8,
+      "active": false
+    },
+    {
+      "from": 0.9,
+      "to": 0.912,
+      "active": false
+    },
+    {
+      "from": 0.954,
+      "to": 1.0,
+      "active": false
+    }
+
+  ]
+};
